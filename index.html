@@ -1,0 +1,739 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>音符练习卡 · 浅灰底色版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ffd966',
+                        secondary: '#ffde9e',
+                        dark: '#0a0e17',
+                        darker: '#121826',
+                        darkest: '#1e2538',
+                        accent: '#252d42'
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 4px 8px black;
+            }
+            .btn-shadow {
+                box-shadow: 0 8px 15px -5px black;
+            }
+            .random-shadow {
+                box-shadow: 0 20px 30px -12px black;
+            }
+            .backdrop-blur-sm {
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+            }
+            .backdrop-blur-md {
+                backdrop-filter: blur(12px);
+                -webkit-backdrop-filter: blur(12px);
+            }
+        }
+    </style>
+    <style>
+        /* 基础样式重置 - 确保全屏无溢出 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            background: #0a0e17;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            touch-action: none;
+        }
+        /* 应用主容器 - 全屏无溢出，弹性布局核心 */
+        .app {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(155deg, #121826 0%, #1e2538 100%);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+        /* 标题容器 - 基础样式，手机/Windows端差异化适配 */
+        .header {
+            flex: 0 0 var(--ui-size);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #f0f3ff;
+            font-size: calc(var(--ui-size) * 0.45);
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-shadow: 0 4px 8px black;
+            white-space: nowrap;
+            z-index: 30;
+            padding: 0 calc(var(--ui-size) * 0.2);
+            box-sizing: border-box;
+            margin-top: var(--ui-margin);
+        }
+        .header span {
+            background: rgba(255,215,0,0.2);
+            padding: 0.2em 0.8em;
+            border-radius: 3em;
+            border: 1px solid rgba(255,215,0,0.3);
+            backdrop-filter: blur(4px);
+            max-width: 100%;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 音符卡片容器 - 弹性占满中间，4槽位严格均分，全端水平对齐 */
+        .slots-row {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: calc(min(1.5vw, 10px));
+            padding: 0 calc(min(2vw, 12px));
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+        /* 单个音符卡片 - 全端等高均分，无偏移 */
+        .slot-card {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            padding: 0;
+            height: 100%;
+            position: relative;
+            box-sizing: border-box;
+        }
+        /* 图片容器 - 全端严格16:9，居中无遮挡，随槽位缩放 | 浅灰方案优化：外层轻灰边框 */
+        .image-wrapper {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 10px -3px rgba(0,0,0,0.2);
+            border: 1px solid rgba(200,200,200,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        /* 核心优化：浅灰底色（方案1），适配黑色透明底SVG，对比度拉满 */
+        .inner-16x9 {
+            width: 100%;
+            height: 100%;
+            background: #f0f2f5;
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+            z-index: 5;
+        }
+        /* 核心优化：更浅灰底色，和内层呼应，过渡自然 */
+        .scroll-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #f8fafc;
+            border-radius: 2px;
+        }
+        .image-strip {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            will-change: transform;
+            transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+        }
+        /* 音符项目 - 全端16:9居中，核心优化：强制透明背景，贴合浅灰底色 */
+        .note-item {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(min(9vw, 9vh, 65px));
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 4px 15px black;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            box-sizing: border-box;
+            line-height: 1;
+        }
+        /* 底部容器 - 与标题完全匹配，上下对称留边 */
+        .footer {
+            flex: 0 0 var(--ui-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            padding: 0 calc(var(--ui-size) * 0.2);
+            box-sizing: border-box;
+            margin-bottom: var(--ui-margin);
+        }
+        /* 随机按钮 - 全端同尺寸缩放，样式统一 */
+        .random-btn {
+            background: rgba(30, 40, 60, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1.8px solid rgba(255, 200, 50, 0.7);
+            border-radius: calc(var(--ui-size) * 0.4);
+            padding: 0 calc(var(--ui-size) * 0.35);
+            font-size: calc(var(--ui-size) * 0.4);
+            font-weight: 600;
+            color: #ffde9e;
+            letter-spacing: 1px;
+            box-shadow: 0 15px 25px -10px black;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 2;
+            white-space: nowrap;
+            text-shadow: 0 2px 8px black;
+            isolation: isolate;
+            position: relative;
+            z-index: 100;
+            touch-action: manipulation;
+            max-width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .random-btn:disabled,
+        .random-btn.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(0.3);
+        }
+
+        /* ============================================== */
+        /* 手机端样式（完全保留测试完美的效果，无任何修改） */
+        /* ============================================== */
+        @media (pointer: coarse) {
+            /* 手机端翻页键 - 横竖屏自适应大小，竖屏更大 */
+            .arrow-btn {
+                background: rgba(25, 35, 55, 0.8);
+                border: 1.5px solid rgba(255, 200, 100, 0.6);
+                width: calc(min(25vw, 80px, 60%));
+                height: calc(min(10vw, 40px, 8vh));
+                border-radius: calc(min(5vw, 20px));
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: calc(min(6vw, 24px, 5vh));
+                color: #ffd966;
+                cursor: pointer;
+                margin: calc(min(2vw, 10px)) auto;
+                transition: all 0.15s ease;
+                box-shadow: 0 6px 12px -4px black;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                line-height: 0.8;
+                font-weight: 300;
+                isolation: isolate;
+                position: relative;
+                z-index: 10;
+                touch-action: manipulation;
+                flex-shrink: 0;
+            }
+            .arrow-btn:disabled {
+                opacity: 0.3;
+                pointer-events: none;
+                transform: scale(0.95);
+            }
+            /* 手机端横竖屏CSS变量 - 竖屏靠中留边，横屏贴顶底 */
+            @media (orientation: landscape) {
+                :root {
+                    --ui-size: 12vh;
+                    --ui-margin: 0px;
+                }
+            }
+            @media (orientation: portrait) {
+                :root {
+                    --ui-size: 12vh;
+                    --ui-margin: 4vh;
+                }
+                /* 手机小屏竖屏强化 - 翻页键更大，留边稍减 */
+                @media (max-width: 480px) {
+                    .arrow-btn {
+                        width: calc(min(30vw, 90px, 70%));
+                        height: calc(min(12vw, 50px, 10vh));
+                        font-size: calc(min(8vw, 30px, 6vh));
+                    }
+                    .note-item {
+                        font-size: calc(min(10vw, 8vh, 50px));
+                    }
+                    :root {
+                        --ui-margin: 3vh;
+                    }
+                }
+            }
+        }
+
+        /* ============================================== */
+        /* Windows端（鼠标端）样式 - 精准优化3个核心需求 */
+        /* ============================================== */
+        @media (pointer: fine) {
+            /* Windows端翻页键 - 加长至图片80%（比图片短），高度适中，圆角协调 */
+            .arrow-btn {
+                background: rgba(25, 35, 55, 0.8);
+                border: 1.5px solid rgba(255, 200, 100, 0.6);
+                width: 80%; /* 核心：比中间图片短，视觉协调 */
+                height: 45px; /* 适度加高，和加长的宽度匹配 */
+                border-radius: 25px; /* 圆角随宽度调整，更美观 */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px; /* 字体适度放大，和按钮尺寸匹配 */
+                color: #ffd966;
+                cursor: pointer;
+                margin: 10px auto; /* 适度间距，不拥挤 */
+                transition: all 0.15s ease;
+                box-shadow: 0 6px 12px -4px black;
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                line-height: 0.8;
+                font-weight: 300;
+                isolation: isolate;
+                position: relative;
+                z-index: 10;
+                flex-shrink: 0;
+            }
+            .arrow-btn:disabled {
+                opacity: 0.3;
+                pointer-events: none;
+                transform: scale(0.95);
+            }
+            /* Windows端CSS变量 - 标题/按钮固定高度+上下对称留边（远离顶底） */
+            :root {
+                --ui-size: 80px;    /* 标题/按钮固定高度，视觉舒适 */
+                --ui-margin: 30px;  /* 核心：上下对称留30px，远离顶底，居中感强 */
+            }
+            /* Windows端音符字体 - 随窗口适配，不溢出、不太小 */
+            .note-item {
+                font-size: calc(min(4vw, 60px));
+            }
+            /* Windows端大屏优化 - 槽位间距稍大，布局更舒展 */
+            @media (min-width: 1200px) {
+                .slots-row {
+                    gap: 18px;
+                    padding: 0 35px;
+                }
+                .note-item {
+                    font-size: 65px;
+                }
+                :root {
+                    --ui-margin: 40px; /* 大屏留边稍大，布局更协调 */
+                }
+            }
+            /* Windows端小窗口优化 - 防止溢出，自适应调整 */
+            @media (max-width: 768px) {
+                :root {
+                    --ui-size: 60px;
+                    --ui-margin: 20px; /* 小窗口留边稍减，保证内容占比 */
+                }
+                .random-btn {
+                    padding: 0 20px;
+                    font-size: 20px;
+                }
+                .header {
+                    font-size: 24px;
+                }
+                .arrow-btn {
+                    height: 38px;
+                    font-size: 24px;
+                    margin: 8px auto;
+                }
+            }
+            /* Windows端超小窗口优化 - 极限适配，不崩溃 */
+            @media (max-width: 480px) {
+                :root {
+                    --ui-margin: 15px;
+                }
+                .arrow-btn {
+                    height: 35px;
+                    font-size: 22px;
+                }
+            }
+        }
+
+        /* 刘海屏/异形屏兼容 - 仅作用于手机端，不影响Windows端 */
+        @supports (padding: env(safe-area-inset-top)) and (pointer: coarse) {
+            .header {
+                padding-top: env(safe-area-inset-top, 0);
+            }
+            .footer {
+                padding-bottom: env(safe-area-inset-bottom, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header"><span>🎵 音符练习卡 @寻光计划 Studio APP</span></div>
+        <div class="slots-row" id="slotsRow"></div>
+        <div class="footer"><button class="random-btn" id="randomBtn">✨ 随机节奏 ✨</button></div>
+    </div>
+    <script>
+        (function() {
+            // 核心：16个SVG链接（按你给的序号1-16，对应A-P，精准无错）
+            const SVG_LINKS = [
+                // 1 - A
+                'https://p26-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/69a2f345b9fa48a3a56e57788d8d3b67.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310031942E98FD3AB0AB8AAD6EE16&rrcfp=1860f75c&x-expires=1773688782&x-signature=KqeANCKwxsX4GyJDlQCLoW8%2FJbM%3D',
+                // 2 - B
+                'https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/58c581974d15425a87d26530009bd0c4.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032036A4AE8307C88971936F4B&rrcfp=1860f75c&x-expires=1773688836&x-signature=pg%2FVflcpsOu60olQaCzosc5Ucds%3D',
+                // 3 - C
+                'https://p26-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/b9860386b36d412b97abebbe16f00a53.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032054222FE06588D68319785C&rrcfp=1860f75c&x-expires=1773688854&x-signature=nc8DBoaxJQF3o4zftng46yDVgPo%3D',
+                // 4 - D
+                'https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/fa8eb9cee19b4e6b9e36717b65badd25.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=202603100321204F505411ACF294DC3168&rrcfp=1860f75c&x-expires=1773688880&x-signature=4lPRVSJFVbxDOs8DxHrTs6dSV2M%3D',
+                // 5 - E
+                'https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/a1cb0cc01e7e465e8e48847c40fce414.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032143CF68F361CA0F62F7B70B&rrcfp=1860f75c&x-expires=1773688903&x-signature=JI%2BPewWknLl9fwlrhfUhiM%2FSlLc%3D',
+                // 6 - F
+                'https://p6-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/80b65a1ec08c46929d4e9edb0b666573.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032236FC01920A17F641F67EA2&rrcfp=1860f75c&x-expires=1773688956&x-signature=xV3JEci1p5sYSDSUe9SjQEh05BQ%3D',
+                // 7 - G
+                'https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/aa638a5bec39451b8e02368b84312157.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=202603100322575EE8BD4739B78F1A4C88&rrcfp=1860f75c&x-expires=1773688977&x-signature=p4rKj55SgSR1Kaa%2BeW6hE5lMBPU%3D',
+                // 8 - H
+                'https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/11449e8e71c14879898ea9cbbcc89bf9.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032315BBFF1EF8E8B203D87DFE&rrcfp=1860f75c&x-expires=1773688996&x-signature=Wo3FEiBNv9AMC8igKi6Xj3XqTQs%3D',
+                // 9 - I
+                'https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/97b16b0d3d5942b5aaa8ccd2c989312b.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=202603100323331577B2B9857E711C3617&rrcfp=1860f75c&x-expires=1773689013&x-signature=PwaNoy4k9IbdohGTppARFUnxeUk%3D',
+                // 10 - J
+                'https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/c9a7e4bb681a456a9e611bab9df0033a.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=2026031003235106965800E410B3DC39E0&rrcfp=1860f75c&x-expires=1773689031&x-signature=k9LKkXn7EAWVeqzMk2r4xlG1x94%3D',
+                // 11 - K
+                'https://p26-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/306c79b15fb045f5a405b4bdff74c9f1.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032413F44847755698CAF62072&rrcfp=1860f75c&x-expires=1773689053&x-signature=lNlSnmJNz6PGkLVfPn5VnKztNDo%3D',
+                // 12 - L
+                'https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/23eb9a45323344a09f4846fce7362fb7.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032504354070B23C1C331BBEC9&rrcfp=1860f75c&x-expires=1773689104&x-signature=DnncC6tTQmiI5JOmgjLFnKKM7uk%3D',
+                // 13 - M
+                'https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/3784218e7a7d470abf5ca4a0f5634813.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032528D5866BE74B9EF6F7E96B&rrcfp=1860f75c&x-expires=1773689129&x-signature=D9SAasUqdqzyZq0RJwyynBxhops%3D',
+                // 14 - N
+                'https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/b83efa8f1fe14981906afbfb59871bb3.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=202603100325511B393A5FFF8764F5A557&rrcfp=1860f75c&x-expires=1773689151&x-signature=%2BZlWJJT4AdQ1E64Sqf9SugYshNQ%3D',
+                // 15 - O
+                'https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/1045409aa66746598e42ba15b3788cab.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=20260310032609460960FBDAB9671A256F&rrcfp=1860f75c&x-expires=1773689169&x-signature=mnqmLXaPrdqXiPpQlaf0HbrAGJQ%3D',
+                // 16 - P
+                'https://p6-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/a6c060f0bc36406fa1b96f08087f72e9.svg~tplv-a9rns2rl98-image-qvalue.image?lk3s=8e244e95&rcl=202603100326455FBA40DE4B462ED787E0&rrcfp=1860f75c&x-expires=1773689205&x-signature=1fJehASNmtljH%2FQMJw%2Bbl%2FaJUOY%3D'
+            ];
+
+            // 音符数据 - 仅用于索引匹配，无实际文字显示
+            const NOTES = [
+                { name: 'A' }, { name: 'B' }, { name: 'C' },
+                { name: 'D' }, { name: 'E' }, { name: 'F' },
+                { name: 'G' }, { name: 'H' }, { name: 'I' },
+                { name: 'J' }, { name: 'K' }, { name: 'L' },
+                { name: 'M' }, { name: 'N' }, { name: 'O' },
+                { name: 'P' }
+            ];
+            // 扩展音符数据以实现无缝滚动 - 原逻辑不变
+            const EXTENDED_NOTES = [];
+            for (let i = 0; i < 30; i++) {
+                NOTES.forEach(note => {
+                    EXTENDED_NOTES.push({ ...note });
+                });
+            }
+            const ITEM_HEIGHT_PERCENT = 100 / EXTENDED_NOTES.length;
+            // 状态管理 - 原数据不变
+            let currentIndices = [0, 0, 0, 0];
+            let isAnimating = [false, false, false, false];
+            // 动画参数 - 原参数不变，保留所有动画效果
+            const ANIMATION_DURATION = 200;
+            // DOM元素 - 原获取不变
+            const slotsRow = document.getElementById('slotsRow');
+            const randomBtn = document.getElementById('randomBtn');
+            let slotStrips = [];
+            let upButtons = [];
+            let downButtons = [];
+            // 构建音符卡片 - 确保结构一致，全端水平对齐
+            function buildSlots() {
+                slotsRow.innerHTML = '';
+                slotStrips = [];
+                upButtons = [];
+                downButtons = [];
+                for (let i = 0; i < 4; i++) {
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'slot-card';
+                    slotDiv.dataset.index = i;
+                    // 上翻按钮
+                    const upBtn = document.createElement('button');
+                    upBtn.className = 'arrow-btn up-btn';
+                    upBtn.innerHTML = '▲';
+                    upBtn.disabled = false;
+                    // 图片容器 - 结构完全一致，全端无差异
+                    const imgWrapper = document.createElement('div');
+                    imgWrapper.className = 'image-wrapper';
+                    const inner16x9 = document.createElement('div');
+                    inner16x9.className = 'inner-16x9';
+                    const scrollContainer = document.createElement('div');
+                    scrollContainer.className = 'scroll-container';
+                    const strip = document.createElement('div');
+                    strip.className = 'image-strip';
+                    // 下翻按钮
+                    const downBtn = document.createElement('button');
+                    downBtn.className = 'arrow-btn down-btn';
+                    downBtn.innerHTML = '▼';
+                    downBtn.disabled = false;
+                    // 创建音符项目 - 直接使用SVG链接作为背景
+                    EXTENDED_NOTES.forEach((note, extIndex) => {
+                        const item = document.createElement('div');
+                        item.className = 'note-item';
+                        // 核心：按序号1-16对应A-P，精准绑定SVG链接
+                        const svgIndex = extIndex % NOTES.length;
+                        item.style.backgroundImage = `url(${SVG_LINKS[svgIndex]})`;
+                        item.style.lineHeight = '1';
+                        strip.appendChild(item);
+                    });
+                    // 设置初始位置 - 精准计算，全端一致
+                    let baseIndex = 15 * NOTES.length + currentIndices[i];
+                    let translateY = - (baseIndex * ITEM_HEIGHT_PERCENT);
+                    strip.style.transform = `translateY(${translateY}%)`;
+                    strip.style.width = '100%';
+                    // 组装DOM - 固定顺序，全端无差异
+                    scrollContainer.appendChild(strip);
+                    inner16x9.appendChild(scrollContainer);
+                    imgWrapper.appendChild(inner16x9);
+                    slotDiv.appendChild(upBtn);
+                    slotDiv.appendChild(imgWrapper);
+                    slotDiv.appendChild(downBtn);
+                    slotsRow.appendChild(slotDiv);
+                    slotStrips.push(strip);
+                    upButtons.push(upBtn);
+                    downButtons.push(downBtn);
+                }
+            }
+            // 手动更新音符 - 滚动后强制对齐，全端无偏移
+            function updateSlotManually(slotIndex, direction) {
+                const strip = slotStrips[slotIndex];
+                if (!strip || isAnimating[slotIndex]) return;
+                isAnimating[slotIndex] = true;
+                const currentBaseIndex = 15 * NOTES.length + currentIndices[slotIndex];
+                const currentY = - (currentBaseIndex * ITEM_HEIGHT_PERCENT);
+                const oneNoteHeight = ITEM_HEIGHT_PERCENT;
+                strip.style.transition = `transform ${ANIMATION_DURATION}ms ease-out`;
+                if (direction === 'up') {
+                    strip.style.transform = `translateY(${currentY - oneNoteHeight}%)`;
+                } else {
+                    strip.style.transform = `translateY(${currentY + oneNoteHeight}%)`;
+                }
+                // 更新索引 - 原逻辑不变
+                if (direction === 'up') {
+                    currentIndices[slotIndex] = (currentIndices[slotIndex] + 1) % NOTES.length;
+                } else {
+                    currentIndices[slotIndex] = (currentIndices[slotIndex] - 1 + NOTES.length) % NOTES.length;
+                }
+                // 动画结束后重置 - 强制宽度和定位，全端一致
+                setTimeout(() => {
+                    isAnimating[slotIndex] = false;
+                    strip.style.transition = 'none';
+                    const finalBaseIndex = 15 * NOTES.length + currentIndices[slotIndex];
+                    const finalY = - (finalBaseIndex * ITEM_HEIGHT_PERCENT);
+                    strip.style.width = '100%';
+                    strip.style.transform = `translateY(${finalY}%)`;
+                }, ANIMATION_DURATION);
+            }
+            // 初始化显示 - 同步渲染，确保全端初始对齐
+            function initAllDisplays() {
+                requestAnimationFrame(() => {
+                    for (let i = 0; i < 4; i++) {
+                        const strip = slotStrips[i];
+                        if (!strip) continue;
+                        let baseIndex = 15 * NOTES.length + currentIndices[i];
+                        let translateY = - (baseIndex * ITEM_HEIGHT_PERCENT);
+                        strip.style.transition = 'none';
+                        strip.style.width = '100%';
+                        strip.style.transform = `translateY(${translateY}%)`;
+                    }
+                });
+            }
+            // 添加事件监听器 - 保留手机端触摸+Windows端鼠标，全端交互一致
+            function addEventListeners() {
+                // 上翻按钮 - 全端交互一致
+                for (let i = 0; i < 4; i++) {
+                    upButtons[i].addEventListener('mousedown', function(e) {
+                        e.stopPropagation();e.preventDefault();
+                        this.style.background = 'rgba(50, 70, 100, 0.9)';
+                        this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                        this.style.transform = 'scale(0.9)';
+                        this.style.color = 'white';
+                    });
+                    upButtons[i].addEventListener('mouseup', function(e) {
+                        e.stopPropagation();e.preventDefault();
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                        updateSlotManually(i, 'up');
+                    });
+                    upButtons[i].addEventListener('mouseleave', function(e) {
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                    });
+                    // 手机端触摸事件 - 仅手机端生效，Windows端无影响
+                    upButtons[i].addEventListener('touchstart', function(e) {
+                        e.stopPropagation();
+                        this.style.background = 'rgba(50, 70, 100, 0.9)';
+                        this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                        this.style.transform = 'scale(0.9)';
+                        this.style.color = 'white';
+                    });
+                    upButtons[i].addEventListener('touchend', function(e) {
+                        e.stopPropagation();
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                        updateSlotManually(i, 'up');
+                    });
+                }
+                // 下翻按钮 - 全端交互一致
+                for (let i = 0; i < 4; i++) {
+                    downButtons[i].addEventListener('mousedown', function(e) {
+                        e.stopPropagation();e.preventDefault();
+                        this.style.background = 'rgba(50, 70, 100, 0.9)';
+                        this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                        this.style.transform = 'scale(0.9)';
+                        this.style.color = 'white';
+                    });
+                    downButtons[i].addEventListener('mouseup', function(e) {
+                        e.stopPropagation();e.preventDefault();
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                        updateSlotManually(i, 'down');
+                    });
+                    downButtons[i].addEventListener('mouseleave', function(e) {
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                    });
+                    // 手机端触摸事件 - 仅手机端生效
+                    downButtons[i].addEventListener('touchstart', function(e) {
+                        e.stopPropagation();
+                        this.style.background = 'rgba(50, 70, 100, 0.9)';
+                        this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                        this.style.transform = 'scale(0.9)';
+                        this.style.color = 'white';
+                    });
+                    downButtons[i].addEventListener('touchend', function(e) {
+                        e.stopPropagation();
+                        this.style.background = '';this.style.borderColor = '';this.style.transform = '';this.style.color = '';
+                        updateSlotManually(i, 'down');
+                    });
+                }
+                // 随机按钮 - 全端交互一致
+                randomBtn.addEventListener('mousedown', function(e) {
+                    e.stopPropagation();e.preventDefault();
+                    this.style.transform = 'scale(0.95)';
+                    this.style.background = 'rgba(50, 60, 85, 0.7)';
+                    this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                });
+                randomBtn.addEventListener('mouseup', function(e) {
+                    e.stopPropagation();e.preventDefault();
+                    this.style.transform = '';this.style.background = '';this.style.borderColor = '';
+                    startSpin();
+                });
+                randomBtn.addEventListener('mouseleave', function(e) {
+                    this.style.transform = '';this.style.background = '';this.style.borderColor = '';
+                });
+                // 手机端触摸事件 - 仅手机端生效
+                randomBtn.addEventListener('touchstart', function(e) {
+                    e.stopPropagation();
+                    this.style.transform = 'scale(0.95)';
+                    this.style.background = 'rgba(50, 60, 85, 0.7)';
+                    this.style.borderColor = 'rgba(255, 215, 0, 0.9)';
+                });
+                randomBtn.addEventListener('touchend', function(e) {
+                    e.stopPropagation();
+                    this.style.transform = '';this.style.background = '';this.style.borderColor = '';
+                    startSpin();
+                });
+            }
+            // 随机节奏功能 - 保留所有动画效果，全端滚动后对齐
+            function startSpin() {
+                for (let i = 0; i < 4; i++) {
+                    const strip = slotStrips[i];
+                    if (!strip || isAnimating[i]) continue;
+                    isAnimating[i] = true;
+                    const targetIndex = Math.floor(Math.random() * NOTES.length);
+                    const currentBaseIndex = 15 * NOTES.length + currentIndices[i];
+                    const startY = - (currentBaseIndex * ITEM_HEIGHT_PERCENT);
+                    let scrollDistance = (targetIndex - currentIndices[i] + NOTES.length) % NOTES.length;
+                    if (scrollDistance < 0) scrollDistance += NOTES.length;
+                    const extraLoops = 1 + Math.floor(Math.random() * 2);
+                    scrollDistance += extraLoops * NOTES.length;
+                    const targetBaseIndex = currentBaseIndex + scrollDistance;
+                    const endY = - (targetBaseIndex * ITEM_HEIGHT_PERCENT);
+                    currentIndices[i] = targetIndex;
+                    const duration = 2000;
+                    const startTime = performance.now();
+                    // 缓动函数 - 原效果不变
+                    function easeInOutSine(t) {
+                        return -(Math.cos(Math.PI * t) - 1) / 2;
+                    }
+                    function animate(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const easedProgress = easeInOutSine(progress);
+                        const currentY = startY + (endY - startY) * easedProgress;
+                        strip.style.width = '100%';
+                        strip.style.transform = `translateY(${currentY}%)`;
+                        if (progress < 1) {
+                            requestAnimationFrame(animate);
+                        } else {
+                            requestAnimationFrame(() => {
+                                const finalBaseIndex = 15 * NOTES.length + targetIndex;
+                                const finalY = - (finalBaseIndex * ITEM_HEIGHT_PERCENT);
+                                strip.style.transition = 'none';
+                                strip.style.width = '100%';
+                                strip.style.transform = `translateY(${finalY}%)`;
+                                isAnimating[i] = false;
+                            });
+                        }
+                    }
+                    requestAnimationFrame(animate);
+                }
+            }
+            // 更新单个插槽显示 - 强制宽度和定位，全端对齐
+            function updateSlotDisplay(slotIndex) {
+                const strip = slotStrips[slotIndex];
+                if (!strip) return;
+                const baseIndex = 15 * NOTES.length + currentIndices[slotIndex];
+                const translateY = - (baseIndex * ITEM_HEIGHT_PERCENT);
+                strip.style.transition = 'none';
+                strip.style.width = '100%';
+                strip.style.transform = `translateY(${translateY}%)`;
+            }
+            // 初始化应用 - 全端一致，保留所有功能
+            buildSlots();
+            initAllDisplays();
+            addEventListeners();
+        })();
+    </script>
+</body>
+</html>
